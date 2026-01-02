@@ -4,12 +4,22 @@
   <meta charset="UTF-8">
   <title>Kodular Firebase Bridge</title>
 
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; }
-    pre { background:#f4f4f4; padding:10px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #fafafa;
+      padding: 10px;
+    }
+    pre {
+      background: #eee;
+      padding: 10px;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 
@@ -18,11 +28,13 @@
   <pre id="log">Waiting for Kodular…</pre>
 
 <script>
-  const log = (msg) => {
+  /* ---------- LOGGING ---------- */
+  function log(msg) {
     console.log(msg);
     document.getElementById("log").textContent += "\n" + msg;
-  };
+  }
 
+  /* ---------- FIREBASE CONFIG ---------- */
   const firebaseConfig = {
     apiKey: "AIzaSyCnLPWHexvnsGwC-f8WjeQOHOP5Rtvk6fE",
     authDomain: "wedi-db408.firebaseapp.com",
@@ -38,50 +50,54 @@
 
   log("🔥 Firebase initialized");
 
+  /* ---------- PREVENT RE-PROCESSING ---------- */
   let lastProcessed = "";
 
+  /* ---------- MAIN LOOP ---------- */
   setInterval(() => {
     try {
-      
+      // ✅ If running in browser (not Kodular), stop safely
       if (!window.AppInventor || !window.AppInventor.getWebViewString) {
-  return; // Not running inside Kodular
-}
+        return;
+      }
 
-const raw = window.AppInventor.getWebViewString();
-
+      const raw = window.AppInventor.getWebViewString();
 
       // Ignore empty, repeated, or non-JSON
-      if (!raw || raw === lastProcessed || raw[0] !== "{") return;
+      if (!raw || raw === lastProcessed || raw[0] !== "{") {
+        return;
+      }
 
       lastProcessed = raw;
-      log("📩 Received: " + raw);
+      log("📩 Received JSON:");
+      log(raw);
 
       const data = JSON.parse(raw);
 
+      /* ---------- HANDLE WRITE ---------- */
       if (data.type === "WRITE") {
         db.ref(data.path).push(data.value)
           .then(() => {
-            log("✅ Firebase write OK");
+            log("✅ Firebase write success");
             window.AppInventor.setWebViewString("OK");
           })
           .catch(err => {
-            log("❌ Firebase error: " + err.message);
+            log("❌ Firebase write error: " + err.message);
             window.AppInventor.setWebViewString("Error");
           });
       } else {
-        log("⚠ Unknown type");
+        log("⚠ Unknown request type");
         window.AppInventor.setWebViewString("Error");
       }
 
     } catch (e) {
       log("❌ JSON Parse error: " + e.message);
-      window.AppInventor.setWebViewString("JSON Error");
+      if (window.AppInventor) {
+        window.AppInventor.setWebViewString("JSON Error");
+      }
     }
   }, 500);
 </script>
 
 </body>
 </html>
-
-
-
