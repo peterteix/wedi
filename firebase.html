@@ -42,7 +42,13 @@
 
   setInterval(() => {
     try {
-      const raw = window.AppInventor.getWebViewString();
+      
+      if (!window.AppInventor || !window.AppInventor.getWebViewString) {
+  return; // Not running inside Kodular
+}
+
+const raw = window.AppInventor.getWebViewString();
+
 
       // Ignore empty, repeated, or non-JSON
       if (!raw || raw === lastProcessed || raw[0] !== "{") return;
@@ -76,5 +82,6 @@
 
 </body>
 </html>
+
 
 
