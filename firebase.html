@@ -1,19 +1,27 @@
 <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>Kodular Firebase Bridge</title>
+
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; }
+    pre { background:#f4f4f4; padding:10px; }
+  </style>
 </head>
+
 <body>
-<h3>Firebase Bridge Loaded</h3>
-<pre id="log"></pre>
+  <h3>Firebase Bridge Loaded</h3>
+  <pre id="log">Waiting for Kodular…</pre>
 
 <script>
   const log = (msg) => {
     console.log(msg);
-    document.getElementById("log").textContent += msg + "\n";
+    document.getElementById("log").textContent += "\n" + msg;
   };
 
   const firebaseConfig = {
@@ -29,36 +37,43 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  log("Firebase initialized");
+  log("🔥 Firebase initialized");
+
+  let lastProcessed = "";
 
   setInterval(() => {
-    const jsonText = window.AppInventor?.getWebViewString?.();
-    if (!jsonText || jsonText === "200") return;
-
-    log("Received JSON: " + jsonText);
-
     try {
-      const data = JSON.parse(jsonText);
+      const raw = window.AppInventor.getWebViewString();
+
+      // Ignore empty, repeated, or non-JSON
+      if (!raw || raw === lastProcessed || raw[0] !== "{") return;
+
+      lastProcessed = raw;
+      log("📩 Received: " + raw);
+
+      const data = JSON.parse(raw);
 
       if (data.type === "WRITE") {
         db.ref(data.path).push(data.value)
           .then(() => {
-            log("✅ Write OK");
+            log("✅ Firebase write OK");
             window.AppInventor.setWebViewString("OK");
           })
-          .catch((err) => {
-            log("❌ Firebase error: " + err);
+          .catch(err => {
+            log("❌ Firebase error: " + err.message);
             window.AppInventor.setWebViewString("Error");
           });
       } else {
-        log("⚠️ Unsupported type: " + data.type);
+        log("⚠ Unknown type");
         window.AppInventor.setWebViewString("Error");
       }
-    } catch (err) {
-      log("❌ JSON parse error: " + err);
-      window.AppInventor.setWebViewString("Error");
+
+    } catch (e) {
+      log("❌ JSON Parse error: " + e.message);
+      window.AppInventor.setWebViewString("JSON Error");
     }
-  }, 1000);
+  }, 500);
 </script>
+
 </body>
 </html>
