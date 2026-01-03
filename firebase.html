@@ -1,61 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Kodular Firebase Bridge</title>
+  <meta charset="UTF-8">
+  <title>Kodular Firebase Bridge</title>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <!-- Firebase SDKs (compat version for simplicity) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fafafa;
+      padding: 12px;
+    }
+    pre {
+      background: #eee;
+      padding: 10px;
+      font-size: 12px;
+      height: 160px;
+      overflow: auto;
+    }
+  </style>
 </head>
 
 <body>
-<h3>Firebase Bridge Ready</h3>
+  <h3>🔥 Firebase Bridge Loaded</h3>
+  <pre id="log">Waiting for Kodular…</pre>
 
 <script>
+/* ---------- LOG HELPER ---------- */
+function log(msg) {
+  console.log(msg);
+  const el = document.getElementById("log");
+  el.textContent += msg + "\n";
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ---------- FIREBASE CONFIG ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyCnLPWHexvnsGwC-f8WjeQOHOP5Rtvk6fE",
   authDomain: "wedi-db408.firebaseapp.com",
   databaseURL: "https://wedi-db408-default-rtdb.firebaseio.com",
   projectId: "wedi-db408",
   storageBucket: "wedi-db408.appspot.com",
-  messagingSenderId: "597651418673",
-  appId: "1:597651418673:web:2469e379b6207d87be6f10"
+  messagingSenderId: "934091430403",
+  appId: "1:934091430403:web:xxxxxxxxxxxx"
 };
 
+/* ---------- INIT FIREBASE ---------- */
 firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+log("🔥 Firebase initialized");
 
+/* ---------- MAIN KODULAR BRIDGE LOOP ---------- */
 setInterval(() => {
-  if (!window.Kodular || !window.Kodular.getWebViewString) return;
+
+  /* Kodular object check */
+  if (!window.Kodular) return;
 
   const raw = window.Kodular.getWebViewString();
+
+  /* Ignore empty or non-JSON strings */
   if (!raw || raw[0] !== "{") return;
+
+  log("📩 Received JSON: " + raw);
 
   try {
     const data = JSON.parse(raw);
 
-    // 🔐 LOGIN
+    /* ----- LOGIN ----- */
     if (data.type === "LOGIN") {
-      firebase.auth().signInAnonymously()
-        .then(userCred => {
-          const uid = userCred.user.uid;
+      const ref = db.ref("users").push({
+        name: data.name,
+        created: Date.now()
+      });
 
-          firebase.database().ref("users/" + uid).set({
-            name: data.name,
-            joined: Date.now()
-          });
+      const uid = ref.key;
+      log("✅ Login OK, UID = " + uid);
 
-          window.Kodular.setWebViewString("UID:" + uid);
+      window.Kodular.setWebViewString("UID:" + uid);
+    }
+
+    /* ----- WRITE COMMENT ----- */
+    if (data.type === "WRITE") {
+      db.ref(data.path).push(data.value)
+        .then(() => {
+          log("✅ Comment saved");
+          window.Kodular.setWebViewString("OK");
         })
         .catch(err => {
-          window.Kodular.setWebViewString("AUTH_ERROR");
+          log("❌ Firebase error");
+          window.Kodular.setWebViewString("Error");
         });
     }
 
   } catch (e) {
-    window.Kodular.setWebViewString("JSON_ERROR");
+    log("❌ JSON parse error (ignored)");
   }
+
 }, 500);
 </script>
+
 </body>
 </html>
