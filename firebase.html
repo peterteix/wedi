@@ -14,16 +14,16 @@ pre { white-space: pre-wrap; }
 </head>
 
 <body>
-<h3>Firebase Bridge Loaded</h3>
-<pre id="log">Waiting…</pre>
+<pre id="log">🔥 Waiting for Kodular…</pre>
 
 <script>
-function log(m) {
-  console.log(m);
-  document.getElementById("log").textContent += "\n" + m;
+function log(msg) {
+  console.log(msg);
+  document.getElementById("log").textContent += "\n" + msg;
 }
 
-const firebaseConfig = {
+/* Firebase */
+firebase.initializeApp({
   apiKey: "AIzaSyCnLPWHexvnsGwC-f8WjeQOHOP5Rtvk6fE",
   authDomain: "wedi-db408.firebaseapp.com",
   databaseURL: "https://wedi-db408-default-rtdb.firebaseio.com",
@@ -31,65 +31,57 @@ const firebaseConfig = {
   storageBucket: "wedi-db408.appspot.com",
   messagingSenderId: "597651418673",
   appId: "1:597651418673:web:2469e379b6207d87be6f10"
-};
+});
 
-firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 log("🔥 Firebase ready");
 
-setInterval(() => {
-  try {
-    if (!window.AppInventor) return;
+/* ===============================
+   KODULAR BRIDGE (CORRECT WAY)
+================================ */
+window.AppInventor = window.AppInventor || {};
 
-    let raw = window.AppInventor.getWebViewString();
+window.AppInventor.onWebViewStringChange = function (raw) {
+  try {
     if (!raw) return;
 
     raw = raw.trim();
+    log("📩 Received → " + raw);
 
-    // Ignore responses like OK / UID:
     if (raw[0] !== "{") return;
 
-    // 🔥 HARD FIX: extract clean JSON only
-    const start = raw.indexOf("{");
-    const end   = raw.lastIndexOf("}");
+    const data = JSON.parse(raw);
 
-    if (start === -1 || end === -1 || end <= start) return;
+    /* WRITE */
+    if (data.type === "WRITE") {
+      db.ref(data.path).push(data.value)
+        .then(() => {
+          log("✅ Write OK");
+          window.AppInventor.setWebViewString("OK");
+        })
+        .catch(() => {
+          log("❌ Write Error");
+          window.AppInventor.setWebViewString("Error");
+        });
+    }
 
-    const cleanJson = raw.substring(start, end + 1);
-
-    log("📩 CLEAN JSON → " + cleanJson);
-
-    const data = JSON.parse(cleanJson);
-
-    // Clear immediately
-    window.AppInventor.setWebViewString("");
-
+    /* LOGIN */
     if (data.type === "LOGIN") {
       const ref = db.ref("users").push({
         name: data.name,
         created: Date.now()
       });
-      window.AppInventor.setWebViewString("UID:" + ref.key);
-      log("👤 Login OK");
-    }
 
-    else if (data.type === "WRITE") {
-      db.ref(data.path).push(data.value)
-        .then(() => {
-          window.AppInventor.setWebViewString("OK");
-          log("✅ Write OK");
-        })
-        .catch(e => {
-          window.AppInventor.setWebViewString("Error");
-          log("❌ Firebase error");
-        });
+      const uid = "UID:" + ref.key;
+      log("👤 Login OK " + uid);
+      window.AppInventor.setWebViewString(uid);
     }
 
   } catch (e) {
-    log("❌ JSON PARSE FAILED → " + e.message);
-    window.AppInventor.setWebViewString("");
+    log("❌ JSON Error " + e.message);
+    window.AppInventor.setWebViewString("JSON Error");
   }
-}, 400);
+};
 </script>
 </body>
 </html>
