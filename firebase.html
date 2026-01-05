@@ -41,7 +41,11 @@
 
       if (!raw || raw[0] !== "{") return;
 
+      if (!raw || raw.trim()[0] !== "{") return;
+
       log("📩 Received: " + raw);
+
+      log("RAW=[" + raw + "]");
 
       const data = JSON.parse(raw);
 
@@ -82,3 +86,4 @@
 </script>
 </body>
 </html>
+
