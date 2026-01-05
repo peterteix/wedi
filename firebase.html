@@ -1,34 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Kodular Firebase Bridge</title>
+<meta charset="UTF-8">
+<title>Kodular Firebase Bridge</title>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
-  <style>
-    body { font-family: monospace; background:#111; color:#0f0; }
-    pre { white-space: pre-wrap; }
-  </style>
+<style>
+body { font-family: monospace; background:#111; color:#0f0; }
+pre { white-space: pre-wrap; }
+</style>
 </head>
 
 <body>
 <h3>Firebase Bridge Loaded</h3>
-<pre id="log">Waiting for Kodular…</pre>
+<pre id="log">Waiting…</pre>
 
 <script>
-/* ======================
-   LOGGER
-====================== */
-function log(msg) {
-  console.log(msg);
-  document.getElementById("log").textContent += "\n" + msg;
+function log(m) {
+  console.log(m);
+  document.getElementById("log").textContent += "\n" + m;
 }
 
-/* ======================
-   FIREBASE CONFIG
-====================== */
 const firebaseConfig = {
   apiKey: "AIzaSyCnLPWHexvnsGwC-f8WjeQOHOP5Rtvk6fE",
   authDomain: "wedi-db408.firebaseapp.com",
@@ -41,60 +35,59 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+log("🔥 Firebase ready");
 
-log("🔥 Firebase initialized");
-
-/* ======================
-   MAIN LOOP (KODULAR)
-====================== */
 setInterval(() => {
   try {
-    if (typeof window.AppInventor === "undefined") return;
+    if (!window.AppInventor) return;
 
     let raw = window.AppInventor.getWebViewString();
     if (!raw) return;
 
     raw = raw.trim();
 
-    // Ignore non-JSON responses
+    // Ignore responses like OK / UID:
     if (raw[0] !== "{") return;
 
-    log("📩 JSON received → " + raw);
+    // 🔥 HARD FIX: extract clean JSON only
+    const start = raw.indexOf("{");
+    const end   = raw.lastIndexOf("}");
 
-    const data = JSON.parse(raw);
+    if (start === -1 || end === -1 || end <= start) return;
 
-    // CLEAR immediately (VERY IMPORTANT)
+    const cleanJson = raw.substring(start, end + 1);
+
+    log("📩 CLEAN JSON → " + cleanJson);
+
+    const data = JSON.parse(cleanJson);
+
+    // Clear immediately
     window.AppInventor.setWebViewString("");
 
-    /* ========= LOGIN ========= */
     if (data.type === "LOGIN") {
       const ref = db.ref("users").push({
         name: data.name,
         created: Date.now()
       });
-
-      const uid = "UID:" + ref.key;
-      log("👤 Login OK → " + uid);
-
-      window.AppInventor.setWebViewString(uid);
+      window.AppInventor.setWebViewString("UID:" + ref.key);
+      log("👤 Login OK");
     }
 
-    /* ========= WRITE ========= */
     else if (data.type === "WRITE") {
       db.ref(data.path).push(data.value)
         .then(() => {
-          log("✅ Firebase WRITE OK");
           window.AppInventor.setWebViewString("OK");
+          log("✅ Write OK");
         })
-        .catch(err => {
-          log("❌ Firebase error: " + err.message);
+        .catch(e => {
           window.AppInventor.setWebViewString("Error");
+          log("❌ Firebase error");
         });
     }
 
   } catch (e) {
-    log("❌ JSON error: " + e.message);
-    window.AppInventor.setWebViewString("JSON Error");
+    log("❌ JSON PARSE FAILED → " + e.message);
+    window.AppInventor.setWebViewString("");
   }
 }, 400);
 </script>
