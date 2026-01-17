@@ -3,44 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <title>Kodular Bridge</title>
+
   <script>
     function sendToKodular(msg) {
       if (window.AppInventor) {
-        window.AppInventor.setWebViewString(msg);
+        // IMPORTANT: clear first
+        window.AppInventor.setWebViewString("");
+        setTimeout(function () {
+          window.AppInventor.setWebViewString(msg);
+        }, 50);
       }
     }
 
     function onKodularMessage(raw) {
       if (!raw || raw.length === 0) return;
 
-      // Split command
       let parts = raw.split("|");
       let command = parts[0];
 
       // LOGIN|name
       if (command === "LOGIN") {
-        let name = parts[1] || "Unknown";
-
-        // Fake UID for now (replace with Firebase later)
-        let uid = "UID_" + Math.floor(Math.random() * 1000000);
-
-        // Send UID back
+        let uid = "UID_" + Date.now();
         sendToKodular("UID:" + uid);
         return;
       }
 
       // WRITE|title|message
       if (command === "WRITE") {
-        // Simulate successful write
         sendToKodular("OK");
         return;
       }
 
-      // Unknown command
       sendToKodular("ERROR");
     }
 
-    // Kodular hook
     window.onload = function () {
       if (window.AppInventor) {
         window.AppInventor.onWebViewString = onKodularMessage;
