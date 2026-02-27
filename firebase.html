@@ -1,48 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Kodular Bridge</title>
+<meta charset="UTF-8">
+<title>Kodular Bridge Test</title>
+<script>
 
-  <script>
-    function sendToKodular(msg) {
-      if (window.AppInventor) {
-        // IMPORTANT: clear first
-        window.AppInventor.setWebViewString("");
-        setTimeout(function () {
-          window.AppInventor.setWebViewString(msg);
-        }, 50);
-      }
-    }
+function send(msg){
+  if(window.AppInventor){
+    window.AppInventor.setWebViewString(msg);
+  }
+}
 
-    function onKodularMessage(raw) {
-      if (!raw || raw.length === 0) return;
+function onKodularMessage(msg){
+  if(!msg) return;
 
-      let parts = raw.split("|");
-      let command = parts[0];
+  if(msg.startsWith("LOGIN|")){
+    send("UID:12345");
+  }
 
-      // LOGIN|name
-      if (command === "LOGIN") {
-        let uid = "UID_" + Date.now();
-        sendToKodular("UID:" + uid);
-        return;
-      }
+  if(msg.startsWith("WRITE|")){
+    send("OK");
+  }
+}
 
-      // WRITE|title|message
-      if (command === "WRITE") {
-        sendToKodular("OK");
-        return;
-      }
+window.onload = function(){
+  if(window.AppInventor){
+    window.AppInventor.onWebViewString = onKodularMessage;
+  }
+}
 
-      sendToKodular("ERROR");
-    }
-
-    window.onload = function () {
-      if (window.AppInventor) {
-        window.AppInventor.onWebViewString = onKodularMessage;
-      }
-    };
-  </script>
+</script>
 </head>
 <body>
 </body>
