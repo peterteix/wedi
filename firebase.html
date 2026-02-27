@@ -2,38 +2,93 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Kodular Bridge</title>
+<title>Firebase Bridge</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 <script>
+  // Your Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCnLPWHexvnsGwC-f8WjeQOHOP5Rtvk6fE",
+    authDomain: "wedi-db408.firebaseapp.com",
+    databaseURL: "https://wedi-db408-default-rtdb.firebaseio.com",
+    projectId: "wedi-db408",
+    storageBucket: "wedi-db408.firebasestorage.app",
+    messagingSenderId: "715353731093",
+    appId: "1:715353731093:web:00706f8cd8898585fc9e1c"
+  };
 
-function send(msg){
-  if(window.AppInventor){
-    window.AppInventor.setWebViewString(msg);
-  }
-}
+  firebase.initializeApp(firebaseConfig);
 
-function checkMessage(){
-  if(window.AppInventor){
-    var msg = window.AppInventor.getWebViewString();
-    if(msg && msg !== ""){
-      handleMessage(msg);
-      window.AppInventor.setWebViewString(""); // clear after reading
+  const auth = firebase.auth();
+  const database = firebase.database();
+
+  let currentUID = null;
+
+  function send(msg){
+    if(window.AppInventor){
+      window.AppInventor.setWebViewString(msg);
     }
   }
-}
 
-function handleMessage(msg){
+  // Sign in anonymously once
+  auth.signInAnonymously()
+    .then((userCredential) => {
+      currentUID = userCredential.user.uid;
+    })
+    .catch((error) => {
+      send("ERROR:AUTH");
+    });
 
-  if(msg.startsWith("LOGIN|")){
-    send("UID:12345");
+  function checkMessage(){
+    if(window.AppInventor){
+      var msg = window.AppInventor.getWebViewString();
+      if(msg && msg !== ""){
+        handleMessage(msg);
+        window.AppInventor.setWebViewString("");
+      }
+    }
   }
 
-  if(msg.startsWith("WRITE|")){
-    send("OK");
-  }
-}
+  function handleMessage(msg){
 
-// Check every 300ms
-setInterval(checkMessage, 300);
+    // LOGIN command
+    if(msg.startsWith("LOGIN|")){
+      if(currentUID){
+        send("UID:" + currentUID);
+      } else {
+        send("ERROR:NOUID");
+      }
+    }
+
+    // WRITE command
+    if(msg.startsWith("WRITE|")){
+
+      if(!currentUID){
+        send("ERROR:NOUID");
+        return;
+      }
+
+      let parts = msg.split("|");
+      let title = parts[1] || "";
+      let message = parts[2] || "";
+
+      database.ref("comments/" + currentUID).push({
+        title: title,
+        message: message,
+        timestamp: Date.now()
+      }).then(() => {
+        send("OK");
+      }).catch(() => {
+        send("ERROR:WRITE");
+      });
+    }
+  }
+
+  setInterval(checkMessage, 300);
 
 </script>
 </head>
