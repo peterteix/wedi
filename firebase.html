@@ -10,7 +10,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <script>
-  // Your Firebase Config
+  // =========================
+  // FIREBASE CONFIG
+  // =========================
   const firebaseConfig = {
     apiKey: "AIzaSyCnLPWHexvnsGwC-f8WjeQOHOP5Rtvk6fE",
     authDomain: "wedi-db408.firebaseapp.com",
@@ -27,6 +29,7 @@
   const database = firebase.database();
 
   let currentUID = null;
+  let firebaseReady = false;
 
   function send(msg){
     if(window.AppInventor){
@@ -34,15 +37,23 @@
     }
   }
 
-  // Sign in anonymously once
-  auth.signInAnonymously()
-    .then((userCredential) => {
-      currentUID = userCredential.user.uid;
-    })
-    .catch((error) => {
-      send("ERROR:AUTH");
-    });
+  // =========================
+  // AUTH STATE LISTENER
+  // =========================
+  auth.onAuthStateChanged(function(user) {
+    if (user) {
+      currentUID = user.uid;
+      firebaseReady = true;
+    } else {
+      auth.signInAnonymously().catch(function(error) {
+        send("ERROR:AUTH");
+      });
+    }
+  });
 
+  // =========================
+  // MESSAGE CHECK LOOP
+  // =========================
   function checkMessage(){
     if(window.AppInventor){
       var msg = window.AppInventor.getWebViewString();
@@ -55,19 +66,25 @@
 
   function handleMessage(msg){
 
-    // LOGIN command
+    // -------------------------
+    // LOGIN COMMAND
+    // -------------------------
     if(msg.startsWith("LOGIN|")){
-      if(currentUID){
-        send("UID:" + currentUID);
-      } else {
-        send("ERROR:NOUID");
+
+      if(!firebaseReady || !currentUID){
+        send("ERROR:NOTREADY");
+        return;
       }
+
+      send("UID:" + currentUID);
     }
 
-    // WRITE command
+    // -------------------------
+    // WRITE COMMENT COMMAND
+    // -------------------------
     if(msg.startsWith("WRITE|")){
 
-      if(!currentUID){
+      if(!firebaseReady || !currentUID){
         send("ERROR:NOUID");
         return;
       }
@@ -80,14 +97,15 @@
         title: title,
         message: message,
         timestamp: Date.now()
-      }).then(() => {
+      }).then(function() {
         send("OK");
-      }).catch(() => {
+      }).catch(function() {
         send("ERROR:WRITE");
       });
     }
   }
 
+  // Run every 300ms
   setInterval(checkMessage, 300);
 
 </script>
