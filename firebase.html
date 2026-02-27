@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Kodular Bridge Test</title>
+<title>Kodular Bridge</title>
 <script>
 
 function send(msg){
@@ -11,8 +11,17 @@ function send(msg){
   }
 }
 
-function onKodularMessage(msg){
-  if(!msg) return;
+function checkMessage(){
+  if(window.AppInventor){
+    var msg = window.AppInventor.getWebViewString();
+    if(msg && msg !== ""){
+      handleMessage(msg);
+      window.AppInventor.setWebViewString(""); // clear after reading
+    }
+  }
+}
+
+function handleMessage(msg){
 
   if(msg.startsWith("LOGIN|")){
     send("UID:12345");
@@ -23,11 +32,8 @@ function onKodularMessage(msg){
   }
 }
 
-window.onload = function(){
-  if(window.AppInventor){
-    window.AppInventor.onWebViewString = onKodularMessage;
-  }
-}
+// Check every 300ms
+setInterval(checkMessage, 300);
 
 </script>
 </head>
